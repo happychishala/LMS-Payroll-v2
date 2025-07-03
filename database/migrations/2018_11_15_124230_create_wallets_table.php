@@ -13,28 +13,21 @@ return new class() extends Migration {
     {
         Schema::create($this->table(), static function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->morphs('holder');
+
+            // Fixed: manually define morphs fields with length
+            $table->string('holder_type', 100);
+            $table->unsignedBigInteger('holder_id');
+
             $table->string('name');
-            $table->string('slug')
-                ->index()
-            ;
-            $table->uuid('uuid')
-                ->unique()
-            ;
-            $table->string('description')
-                ->nullable()
-            ;
-            $table->json('meta')
-                ->nullable()
-            ;
-            $table->decimal('balance', 64, 0)
-                ->default(0)
-            ;
-            $table->unsignedSmallInteger('decimal_places')
-                ->default(2)
-            ;
+            $table->string('slug', 100)->index();
+            $table->uuid('uuid')->unique();
+            $table->string('description')->nullable();
+            $table->json('meta')->nullable();
+            $table->decimal('balance', 64, 0)->default(0);
+            $table->unsignedSmallInteger('decimal_places')->default(2);
             $table->timestamps();
 
+            // Fixed: composite key must not exceed 1000 bytes
             $table->unique(['holder_type', 'holder_id', 'slug']);
         });
 
@@ -42,8 +35,7 @@ return new class() extends Migration {
             $table->foreign('wallet_id')
                 ->references('id')
                 ->on($this->table())
-                ->onDelete('cascade')
-            ;
+                ->onDelete('cascade');
         });
     }
 

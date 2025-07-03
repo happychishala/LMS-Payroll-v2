@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 use App\Filament\CustomLogOutResponse;
 use Filament\Http\Responses\Auth\Contracts\LogoutResponse as LogoutResponseContract;
-
+use Illuminate\Support\Facades\Schema;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -28,10 +28,11 @@ class AppServiceProvider extends ServiceProvider
             'Customers',
             'Loan Agreement Forms',
             'Wallets',
-            'Loans',            
+            'Loans',
             'Expenses',
             'Repayments',
             'Addons',
         ]);
+        Schema::defaultStringLength(125);
     }
 }

@@ -2,6 +2,22 @@
 
 return [
 
+    'pages' => [
+        App\Filament\Pages\AmortizationPage::class,
+        App\Filament\Pages\LoanStatementPage::class,
+    ],
+       'brand' => [
+        // this is the light-mode logo (often a dark SVG on white bg)
+        'logo'           => '/logos/logo-light.svg',
+
+        // this is the dark-mode logo (often a light SVG on dark bg)
+        'dark_mode_logo' => '/logos/logo-dark.svg',
+
+        // your favicon
+        'favicon'        => '/favicon.ico',
+    ],
+
+
     /*
     |--------------------------------------------------------------------------
     | Broadcasting
@@ -70,5 +86,6 @@ return [
     */
 
     'livewire_loading_delay' => 'default',
+
 
 ];

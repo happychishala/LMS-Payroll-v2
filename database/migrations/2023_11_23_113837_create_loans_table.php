@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('borrower_id');
             $table->unsignedBigInteger('loan_type_id');
             $table->string('loan_status');
-            $table->decimal('principal_amount', 10, 2);            
+            $table->decimal('principal_amount', 10, 2);
             $table->string('loan_release_date');
             $table->string('loan_duration');
             $table->string('duration_period');
@@ -24,6 +24,14 @@ return new class extends Migration
             $table->timestamps();
             $table->foreign('borrower_id')->references('id')->on('borrowers')->onDelete('cascade');
             $table->foreign('loan_type_id')->references('id')->on('loan_types')->onDelete('cascade');
+            $table->decimal('interest_rate', 5, 2)->nullable();
+            $table->decimal('interest_amount', 15, 2)->nullable();
+            $table->decimal('repayment_amount', 15, 2)->nullable();
+            $table->decimal('admin_fee', 15, 2)->nullable();
+            $table->decimal('insurance_fee', 15, 2)->nullable();
+            $table->decimal('arrangement_fee', 15, 2)->nullable();
+            $table->decimal('crb_fee', 15, 2)->nullable();
+            $table->decimal('repayment_amount', 10, 2);
         });
     }
 

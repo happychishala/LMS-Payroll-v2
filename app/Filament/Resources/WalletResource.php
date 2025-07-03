@@ -37,7 +37,7 @@ class WalletResource extends Resource
                 Forms\Components\TextInput::make('meta')
                     ->label('Currency')
                     ->formatStateUsing(function ($state, $record) {
-                        
+
                         return $record->meta['currency'] ?? '';
                     })
                     ->required()
@@ -54,9 +54,9 @@ class WalletResource extends Resource
                     ->numeric()
                     ->minValue(0)
                     ->prefixIcon('fas-dollar-sign'),
-                    
-               
-                    
+
+
+
                 Forms\Components\RichEditor::make('description')
                     ->label('Description')
                     ->columnSpan(2)
@@ -71,12 +71,12 @@ class WalletResource extends Resource
 
                 Tables\Columns\TextColumn::make('name')
                 ->badge()
-                
+
                     ->searchable(),
                 Tables\Columns\TextColumn::make('slug')
                     ->badge()
-                    
-                    ->searchable(),                   
+
+                    ->searchable(),
 
                 Tables\Columns\TextColumn::make('balance')
                 ->badge()
@@ -90,7 +90,7 @@ class WalletResource extends Resource
                 //
             ])
             ->actions([
-               
+
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -118,6 +118,7 @@ class WalletResource extends Resource
             'create' => Pages\CreateWallet::route('/create'),
             'view' => Pages\ViewWallet::route('/{record}'),
             'edit' => Pages\EditWallet::route('/{record}/edit'),
+            
         ];
     }
 }

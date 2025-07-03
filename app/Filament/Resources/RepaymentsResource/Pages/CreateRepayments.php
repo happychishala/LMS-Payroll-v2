@@ -45,7 +45,7 @@ class CreateRepayments extends CreateRecord
         $loan = Loan::findOrFail($data['loan_id']);
         Log::info('Loan Details: ' . $loan);
 
-        $wallet = Wallet::where('name', "=", $loan->from_this_account)->first();
+        $wallet = Wallet::findOrFail($loan->from_this_account);
         Log::info('Wallet Details: ' . $wallet);
         $principal_amount = $loan->principal_amount;
         $loan_number = $loan->loan_number;
@@ -62,7 +62,7 @@ class CreateRepayments extends CreateRecord
             'principal' => $principal_amount,
 
         ]);
-      
+
 
 
         $wallet->deposit($data['payments'], ['meta' => 'Loan repayment amount']);
