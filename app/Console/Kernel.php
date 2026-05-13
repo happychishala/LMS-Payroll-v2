@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Add this line below
+        $schedule->command('withholding:update-status')->dailyAt('01:00');
     }
 
     /**

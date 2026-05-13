@@ -34,7 +34,7 @@ class LoanStatementPage extends Page implements HasTable
     //  FORM STATE PROPERTIES (public so Filament can bind/validate them)
     // ────────────────────────────────────────────────────────────────────
 
-    public ?int    $loan_id   = null;
+    public ?string    $loan_id   = null;
     public ?string $from_date = null;
     public ?string $to_date   = null;
 
@@ -58,11 +58,11 @@ class LoanStatementPage extends Page implements HasTable
     protected function getFormSchema(): array
     {
         return [
-            Select::make('loan_id')
-                ->label('Loan')
-                ->options(Loan::pluck('loan_number', 'id')->toArray())
-                ->searchable()
-                ->required(),
+           Select::make('loan_id')
+    ->label('Loan')
+    ->options(Loan::pluck('loan_id', 'loan_id')->toArray())
+    ->searchable()
+    ->required(),
 
             DatePicker::make('from_date')
                 ->label('From')
@@ -97,8 +97,8 @@ class LoanStatementPage extends Page implements HasTable
     {
         return Repayments::query()
             ->select([
-                'repayment_date as date',
-                'payments',
+                'receipt_date as date',
+                'receipt_amount as payments',
                 'balance as balance',
             ])
             ->where('loan_id', $this->loan_id)

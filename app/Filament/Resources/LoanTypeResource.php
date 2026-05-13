@@ -53,6 +53,10 @@ class LoanTypeResource extends Resource
 
                     ])
                     ->required(),
+                Forms\Components\Toggle::make('active')
+                    ->label('Active')
+                    ->default(true)
+                    ->inline(false),
             ]);
     }
 
@@ -70,6 +74,9 @@ class LoanTypeResource extends Resource
                 Tables\Columns\TextColumn::make('interest_cycle')
                     ->badge()
                     ->searchable(),
+                Tables\Columns\IconColumn::make('active')
+                    ->label('Active')
+                    ->boolean(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('interest_cycle')
@@ -80,6 +87,8 @@ class LoanTypeResource extends Resource
                         'year(s)' => 'Yearly',
 
                     ]),
+                Tables\Filters\TernaryFilter::make('active')
+                    ->label('Active'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

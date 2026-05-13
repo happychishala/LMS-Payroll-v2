@@ -13,11 +13,17 @@ class EditBorrower extends EditRecord
     protected static string $resource = BorrowerResource::class;
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        $data['full_name'] = $data['first_name'] . ' ' . $data['last_name'] . ' - ' . $data['mobile'];
+        $data = BorrowerResource::mutateBorrowerData($data);
         $record->update($data);
 
         return $record;
     }
+
+    protected function afterSave(): void
+    {
+        BorrowerResource::syncAttachmentReferences($this->record);
+    }
+
     protected function getHeaderActions(): array
     {
 

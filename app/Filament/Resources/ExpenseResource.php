@@ -71,14 +71,26 @@ class ExpenseResource extends Resource
                     ->native(false)
                     ->maxDate(now()),
                 SpatieMediaLibraryFileUpload::make('expense_attachment')
+                    ->collection('expense_attachment')
                     ->disk('expenses')
                     ->visibility('public')
                     ->multiple()
                     ->minFiles(0)
                     ->maxFiles(10)
-                    ->maxSize(5120)
+                    ->maxSize(102400)
+                    ->acceptedFileTypes([
+                        'application/pdf',
+                        'image/jpeg',
+                        'image/png',
+                        'application/zip',
+                        'application/x-zip-compressed',
+                        '.zip',
+                    ])
+                    ->helperText('PDF, JPG, PNG, and ZIP files up to 100 MB each are allowed.')
                     ->columnSpan(2)
                     ->openable()
+                    ->downloadable()
+                    ->reorderable()
 
 
 

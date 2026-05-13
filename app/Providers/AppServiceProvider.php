@@ -7,6 +7,8 @@ use Illuminate\Support\ServiceProvider;
 use App\Filament\CustomLogOutResponse;
 use Filament\Http\Responses\Auth\Contracts\LogoutResponse as LogoutResponseContract;
 use Illuminate\Support\Facades\Schema;
+use App\Models\Loan;
+use App\Observers\LoanObserver;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -34,5 +36,9 @@ class AppServiceProvider extends ServiceProvider
             'Addons',
         ]);
         Schema::defaultStringLength(125);
+        Loan::observe(LoanObserver::class);
     }
+
+
+
 }

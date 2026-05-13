@@ -22,6 +22,8 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use App\Filament\Pages\EmployerCsvReport;
+use App\Filament\Pages\OutrightSettlementsReport;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -48,9 +50,9 @@ class AdminPanelProvider extends PanelProvider
                     'sm' => 2,
                 ]),
         ])
-        // ->brandLogo(asset('Logos/logo2.png'))
-        // ->brandLogoHeight('4rem')
-        // ->favicon(asset('Logos/logo2.png'))
+        ->brandLogo(asset('https://zedfin.co/img/ZED-FIN_LOGO-removebg.png'))
+        ->brandLogoHeight('4rem')
+        ->favicon(asset('https://zedfin.co/img/ZED-FIN_LOGO-removebg.png'))
         ->sidebarCollapsibleOnDesktop()
         
         ->login()
@@ -67,6 +69,8 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
+                 EmployerCsvReport::class,
+            OutrightSettlementsReport::class,
                 
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')

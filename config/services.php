@@ -31,4 +31,11 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'nominatim' => [
+        'enabled' => env('NOMINATIM_ENABLED', true),
+        'endpoint' => env('NOMINATIM_ENDPOINT', 'https://nominatim.openstreetmap.org/search'),
+        'timeout' => env('NOMINATIM_TIMEOUT', 8),
+        'user_agent' => env('NOMINATIM_USER_AGENT', env('APP_NAME', 'Laravel') . '/1.0'),
+    ],
+
 ];

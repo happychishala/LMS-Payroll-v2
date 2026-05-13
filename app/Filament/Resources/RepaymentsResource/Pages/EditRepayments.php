@@ -17,4 +17,10 @@ class EditRepayments extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        $panelPath = trim(config('filament.path', 'admin'), '/');
+        return url($panelPath ?: '/').'/resources/repayments';
+    }
 }

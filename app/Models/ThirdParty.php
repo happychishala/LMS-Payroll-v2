@@ -9,17 +9,19 @@ class ThirdParty extends Model
 {
     use HasFactory;
 
+    protected $guarded = [];
+
     protected $casts = [
         'is_active' => 'boolean',
     ];
 
-    public function getIsActiveAttribute($value) {
-        if($value){
-            return 'Active';
-        }
-        else{
-            return 'In-Active';
-        }
-        
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function getActiveStatusAttribute(): string
+    {
+        return $this->is_active ? 'Active' : 'Inactive';
     }
 }

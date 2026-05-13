@@ -1,22 +1,21 @@
 <?php
 
 return [
-
     'pages' => [
         App\Filament\Pages\AmortizationPage::class,
         App\Filament\Pages\LoanStatementPage::class,
+        \App\Filament\Pages\TopUpLoans::class,
     ],
-       'brand' => [
+    'brand' => [
         // this is the light-mode logo (often a dark SVG on white bg)
-        'logo'           => '/logos/logo-light.svg',
+        'logo' => '/logos/logo-light.svg',
 
         // this is the dark-mode logo (often a light SVG on dark bg)
         'dark_mode_logo' => '/logos/logo-dark.svg',
 
         // your favicon
-        'favicon'        => '/favicon.ico',
+        'favicon' => '/favicon.ico',
     ],
-
 
     /*
     |--------------------------------------------------------------------------
@@ -87,5 +86,8 @@ return [
 
     'livewire_loading_delay' => 'default',
 
-
+    'resources' => [
+        // ...
+        \App\Filament\Resources\RepaymentScheduleResource::class,
+    ],
 ];

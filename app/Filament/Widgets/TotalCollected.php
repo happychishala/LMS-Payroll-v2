@@ -3,7 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Repayments;
-use Filament\Widgets\ChartWidget;
+use Filament\Widgets\BarChartWidget;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 use Carbon\CarbonImmutable;
 use Filament\Widgets\StatsOverviewWidget;
@@ -11,13 +11,13 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Database\Eloquent\Builder;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 
-class TotalCollected extends ChartWidget
+class TotalCollected extends BarChartWidget
 {
     use InteractsWithPageFilters;
     use HasWidgetShield;
     protected static ?string $heading = 'Total Collected';
     protected static ?string $maxHeight = '200px';
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
 
     protected function getData(): array
     {
@@ -26,53 +26,24 @@ class TotalCollected extends ChartWidget
         $records = [];
         for ($month = 1; $month <= 12; $month++) {
             $records[] = Repayments::query()
-            ->when($startDate, fn(Builder $query) => $query->whereDate('created_at', '>=', $startDate))
-            ->when($endDate, fn(Builder $query) => $query->whereDate('created_at', '<=', $endDate))
-            ->whereMonth('created_at', $month)
-            ->sum('payments');
+            ->when($startDate, fn(Builder $query) => $query->whereDate('receipt_date', '>=', $startDate))
+            ->when($endDate, fn(Builder $query) => $query->whereDate('receipt_date', '<=', $endDate))
+            ->whereMonth('receipt_date', $month)
+            ->sum('receipt_amount');
         }
-        
 
         return [
             'datasets' => [
                 [
+                    'label' => 'Monthly Collections (ZMW)',
                     'data' => array_map('floatval', $records),
-                    'backgroundColor' => [
-                        '#FF6384',
-                        '#36A2EB',
-                        '#FFCE56',
-                        '#4CAF50',
-                        '#FF8C00',
-                        '#9966CC',
-                        '#00BFFF',
-                        '#FFD700',
-                        '#008080',
-                        '#FF4500',
-                        '#8A2BE2',
-                        '#1E90FF',
-                    ],
-                    'hoverBackgroundColor' => [
-                        '#FF6384',
-                        '#36A2EB',
-                        '#FFCE56',
-                        '#4CAF50',
-                        '#FF8C00',
-                        '#9966CC',
-                        '#00BFFF',
-                        '#FFD700',
-                        '#008080',
-                        '#FF4500',
-                        '#8A2BE2',
-                        '#1E90FF',
-                    ],
+                    'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
+                    'borderColor' => 'rgb(34, 197, 94)',
+                    'borderWidth' => 1,
+                    'hoverBackgroundColor' => 'rgba(34, 197, 94, 1)',
                 ],
             ],
             'labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         ];
-    }
-
-    protected function getType(): string
-    {
-        return 'pie'; // Use 'pie' for a pie chart
     }
 }

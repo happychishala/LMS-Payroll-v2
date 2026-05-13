@@ -1,0 +1,237 @@
+import pandas as pd
+from sqlalchemy import create_engine, Table, MetaData
+from sqlalchemy.dialects.mysql import insert
+import datetime
+from datetime import datetime, timedelta
+
+# ─── 1. CONFIGURATION ───────────────────────────────────────────────────────────
+
+EXCEL_PATH = '/Users/zedfin-it/Documents/CD2DBF.xlsx'
+DB_USER    = 'root'
+DB_PASS    = ''
+DB_HOST    = 'localhost'
+DB_NAME    = 'lms'
+
+# ─── 2. READ EXCEL, SET HEADERS ────────────────────────────────────────────────
+
+df = pd.read_excel(EXCEL_PATH, header=None, engine='openpyxl')
+df.columns = [
+    'Customer ID', 'Last Name', 'Other Names', 'NRC Number', 'DOB', 'Phone number', 'Address',
+    'Age', 'Mine Number', 'Gender', 'Title', 'Retirement Date', 'Termdate', 'StartCont', 'EndCont',
+    'ContType', 'Martial Status', 'Email', 'Bank', 'Branch Code', 'Account Type', 'Account Number',
+    'Nationality', 'Employer', 'Employer number', 'Employer Address', 'Employer position', 'Occupation',
+    'Cycle', 'Next of Kin', "Next of Kin's Address", 'NOK NRC', 'NOK  phone number'
+]
+print("Detected columns:\n", df.columns.tolist(), "\n")
+
+# ─── 3. REMOVE HEADER ROW IF PRESENT IN DATA ───────────────────────────────────
+# If the first row is a header (string values), drop it
+if all(isinstance(x, str) for x in df.iloc[0]):
+    df = df.iloc[1:].reset_index(drop=True)
+
+# ─── 4. FILL UNNAMED COLUMNS ───────────────────────────────────────────────────
+for col in df.columns:
+    if col.startswith('Unnamed'):
+        sample = df[col].dropna()
+        if not sample.empty and pd.api.types.is_numeric_dtype(sample):
+            df[col] = 0
+        else:
+            df[col] = '-'
+
+# ─── 5. MAP EXCEL HEADERS → YOUR DB COLUMNS ────────────────────────────────────
+
+mapping = {
+    'Last Name'                 : 'last_name',
+    'Other Names'               : 'first_name',
+    'NRC Number'                : 'identification',
+    'DOB'                       : 'dob',
+    'Phone number'              : 'mobile',
+    'Address'                   : 'address',
+    'Gender'                    : 'gender',
+    'Email'                     : 'email',
+    'Occupation'                : 'occupation',
+    'Next of Kin'               : 'next_of_kin_first_name',
+    "Next of Kin's Address"     : 'address_next_of_kin',
+    'NOK  phone number'         : 'phone_next_of_kin',
+    'Bank'                      : 'bank_name',
+    'Branch Code'               : 'bank_branch',
+    'Account Number'            : 'bank_account_number',
+    # add more mappings if needed
+}
+
+keep_cols = [col for col, dbcol in mapping.items() if dbcol is not None]
+df = df[keep_cols].rename(columns={col: mapping[col] for col in keep_cols})
+
+# ─── 6. ADD REQUIRED COLUMNS WITH DEFAULTS ─────────────────────────────────────
+
+required_defaults = {
+    'province': 'Unknown',
+    'full_name': '',         
+    'added_by': 0,  # <-- integer, not string
+    # add more required columns and their defaults here if needed
+}
+for col, default in required_defaults.items():
+    if col not in df.columns:
+        df[col] = default
+
+# ─── 7. GENERATE full_name IF NEEDED ───────────────────────────────────────────
+
+df['full_name'] = (
+    df['first_name'].fillna('') + ' ' + df['last_name'].fillna('')
+    if 'first_name' in df.columns and 'last_name' in df.columns
+    else df['full_name']
+)
+df['full_name'] = df['full_name'].str.strip()
+
+# ─── 8. FORCE ALL NULLS TO SAFE DEFAULTS ───────────────────────────────────────
+
+# List all columns you want to fill (except id/auto fields)
+all_db_columns = [
+    'first_name', 'last_name', 'gender', 'dob', 'occupation', 'identification', 'mobile', 'email', 'address',
+    'city', 'province', 'zipcode', 'created_at', 'updated_at', 'next_of_kin_first_name', 'next_of_kin_last_name',
+    'phone_next_of_kin', 'address_next_of_kin', 'relationship_next_of_kin', 'bank_name', 'bank_branch',
+    'bank_sort_code', 'bank_account_number', 'bank_account_name', 'mobile_money_name', 'mobile_money_number',
+    'attachment', 'full_name', 'added_by', 'other_names', 'age', 'mine_number', 'title', 'retirement_date',
+    'term_date', 'start_contract', 'end_contract', 'contract_type', 'marital_status', 'bank_account_type',
+    'nationality', 'employer', 'employer_number', 'employer_address', 'employer_position', 'cycle', 'next_of_kin_nrc'
+]
+
+# Add any missing columns to the DataFrame with a safe default
+for col in all_db_columns:
+    if col not in df.columns:
+        df[col] = '-'
+
+# Now force all nulls/NaN to safe defaults
+for col in df.columns:
+    if pd.api.types.is_numeric_dtype(df[col]):
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    else:
+        df[col] = df[col].astype(object).replace({pd.NA: '-', None: '-'}).fillna('-')
+
+date_columns = [
+    'created_at', 'updated_at', 'retirement_date', 'term_date',
+    'start_contract', 'end_contract', 'dob'
+]
+
+# Parse all date columns in the DataFrame
+for col in date_columns:
+    if col in df.columns:
+        # Try to parse dates, coerce errors to NaT, and handle dayfirst formats
+        df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
+
+# ─── 9. CONNECT & UPSERT ───────────────────────────────────────────────────────
+
+engine   = create_engine(f'mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}')
+metadata = MetaData()
+borrowers = Table('borrowers', metadata, autoload_with=engine)
+
+skipped = 0
+
+log_file = f"import_errors_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+log = open(log_file, "w")
+
+DEFAULT_DOB = '1970-01-01'
+DEFAULT_AGE = 18
+
+with engine.begin() as conn:
+    for record in df.to_dict(orient='records'):
+        today = datetime.today()
+        dob_val = record.get('dob', None)
+        age_val = record.get('age', None)
+
+        # --- DOB handling ---
+        if pd.isna(dob_val) or dob_val is None or (hasattr(dob_val, 'year') and dob_val.year < 1000):
+            try:
+                age_int = int(age_val)
+                dob_calc = today.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=365 * age_int)
+                record['dob'] = dob_calc.strftime('%Y-%m-%d')
+            except Exception:
+                record['dob'] = DEFAULT_DOB
+        elif isinstance(dob_val, (pd.Timestamp, datetime)):
+            record['dob'] = dob_val.strftime('%Y-%m-%d')
+        elif isinstance(dob_val, str):
+            # Try to parse string date
+            try:
+                dob_dt = pd.to_datetime(dob_val, errors='coerce', dayfirst=True)
+                if pd.isna(dob_dt) or dob_dt.year < 1000:
+                    record['dob'] = DEFAULT_DOB
+                else:
+                    record['dob'] = dob_dt.strftime('%Y-%m-%d')
+            except Exception:
+                record['dob'] = DEFAULT_DOB
+
+        # --- AGE handling ---
+        try:
+            age_int = int(age_val)
+            record['age'] = age_int
+        except Exception:
+            # If dob is valid, calculate age from dob
+            try:
+                dob_dt = pd.to_datetime(record['dob'], errors='coerce')
+                if not pd.isna(dob_dt):
+                    record['age'] = today.year - dob_dt.year - ((today.month, today.day) < (dob_dt.month, dob_dt.day))
+                else:
+                    record['age'] = DEFAULT_AGE
+            except Exception:
+                record['age'] = DEFAULT_AGE
+
+        # --- Other date columns ---
+        for col in date_columns:
+            if col == 'dob':
+                continue
+            if col in record:
+                v = record[col]
+                if pd.isna(v) or v is None:
+                    record[col] = None
+                elif hasattr(v, 'year') and v.year < 1000:
+                    record[col] = None
+                elif isinstance(v, (pd.Timestamp, datetime)):
+                    if v.hour == 0 and v.minute == 0 and v.second == 0:
+                        record[col] = v.strftime('%Y-%m-%d')
+                    else:
+                        record[col] = v.strftime('%Y-%m-%d %H:%M:%S')
+                elif isinstance(v, str):
+                    # Try to parse string date
+                    try:
+                        dt = pd.to_datetime(v, errors='coerce', dayfirst=True)
+                        if pd.isna(dt) or dt.year < 1000:
+                            record[col] = None
+                        else:
+                            record[col] = dt.strftime('%Y-%m-%d')
+                    except Exception:
+                        record[col] = None
+
+        # --- Mine Number & Employer Number logic ---
+        mine_number = record.get('mine_number', None)
+        if mine_number in [None, '', '-', 'NaN']:
+            record['mine_number'] = '-'
+            record['employer_number'] = '-'
+        else:
+            record['mine_number'] = str(mine_number)
+            record['employer_number'] = str(mine_number)
+
+        # --- Insert logic ---
+        try:
+            stmt = insert(borrowers).values(**record)
+            update_cols = {c: stmt.inserted[c] for c in record.keys()}
+            upsert = stmt.on_duplicate_key_update(**update_cols)
+            conn.execute(upsert)
+        except Exception as e:
+            log.write(f"❌ Error: {e}\nRecord: {record}\nTrying to fix and re-insert...\n")
+            # Fix age and dob for retry
+            if 'age' in record and (record['age'] in [None, '', '-', 'NaN']):
+                record['age'] = DEFAULT_AGE
+            if 'dob' in record and (record['dob'] in [None, '', '-', 'NaT']):
+                record['dob'] = DEFAULT_DOB
+            try:
+                stmt = insert(borrowers).values(**record)
+                update_cols = {c: stmt.inserted[c] for c in record.keys()}
+                upsert = stmt.on_duplicate_key_update(**update_cols)
+                conn.execute(upsert)
+                log.write("✅ Fixed and inserted.\n")
+            except Exception as e2:
+                log.write(f"❌ Still failed after fix: {e2}\n")
+                skipped += 1
+
+log.close()
+print(f"✅ Done importing/updating borrowers. Skipped {skipped} entries due to errors. See {log_file} for details.")

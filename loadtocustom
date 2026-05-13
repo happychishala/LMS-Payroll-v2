@@ -1,0 +1,166 @@
+import pandas as pd
+from sqlalchemy import create_engine, text, inspect
+
+# === 1) CONFIG ===
+csv_file = '/Users/zedfin-it/LMS-Payroll-v2/CD2DBF.csv'
+
+db_user = 'root'
+db_password = ''
+db_host = 'localhost'
+db_port = '3306'
+db_name = 'lms'
+
+# === 2) Load CSV ===
+df = pd.read_csv(csv_file)
+
+# === 3) Rename columns to internal names ===
+df.rename(columns={
+    'Customer ID': 'customer_id',
+    'Last Name': 'last_name',
+    'Other Names': 'other_names',
+    'NRC Number': 'nrc_number',
+    'DOB': 'dob',
+    'Phone number': 'phone_number',
+    'Address': 'address',
+    'Age': 'age',
+    'Mine Number': 'mine_number',
+    'Gender': 'gender',
+    'Title': 'title',
+    'Retirement Date': 'retirement_date',
+    'Termdate': 'termdate',
+    'StartCont': 'startcont',
+    'EndCont': 'endcont',
+    'ContType': 'conttype',
+    'Marital Status': 'marital_status',
+    'Email': 'email',
+    'Bank': 'bank',
+    'Branch Code': 'branch_code',
+    'Account Type': 'account_type',
+    'Account Number': 'account_number',
+    'Nationality': 'nationality',
+    'Employer': 'employer',
+    'Employer number': 'employer_number',
+    'Employer Address': 'employer_address',
+    'Employer position': 'employer_position',
+    'Occupation': 'occupation',
+    'Cycle': 'cycle',
+    'Next of Kin': 'next_of_kin',                       # NOK fields from file
+    "Next of Kin's Address": 'next_of_kin_address',
+    'NOK NRC': 'nok_nrc',
+    'NOK  phone number': 'nok_phone_number',
+}, inplace=True)
+
+# === 4) Clean dates (optional) ===
+date_columns = ['dob', 'retirement_date', 'termdate', 'startcont', 'endcont']
+for col in date_columns:
+    if col in df.columns:
+        df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True).dt.strftime('%Y-%m-%d')
+
+# === 5) Basic trimming/normalization for phone ===
+if 'phone_number' in df.columns:
+    df['phone_number'] = df['phone_number'].astype(str).str.strip().str.slice(0, 20)
+
+# === 6) DB connect ===
+engine = create_engine(f'mysql+mysqlconnector://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}')
+insp = inspect(engine)
+
+# Verify target table and columns
+borrower_cols = {c['name'] for c in insp.get_columns('borrowers')}
+
+# Map CSV → borrowers NOK columns (only keep ones that exist)
+nok_map_all = {
+    'next_of_kin':        'next_of_kin_first_name',   # or whatever your column is named
+    'next_of_kin_address':'address_next_of_kin',
+    'nok_phone_number':   'phone_next_of_kin',
+    'nok_nrc':            'nok_nrc',                  # only if this column exists in borrowers
+}
+
+# Keep only mappable pairs where target column exists in borrowers
+nok_map = {src: tgt for src, tgt in nok_map_all.items() if tgt in borrower_cols}
+
+if not nok_map:
+    raise RuntimeError("No matching NOK columns found in 'borrowers'. Check column names.")
+
+# Keep only rows that have at least one NOK value present
+nok_src_cols = list(nok_map.keys())
+df_nok = df.loc[df[nok_src_cols].notna().any(axis=1), ['customer_id', 'nrc_number'] + nok_src_cols].copy()
+
+# Normalize empties to None so we don't try to write blanks
+for c in nok_src_cols:
+    if c in df_nok.columns:
+        df_nok[c] = df_nok[c].astype(str).str.strip()
+        df_nok[c] = df_nok[c].replace({'': None, 'nan': None, 'None': None})
+
+# Helper to run batch updates
+def update_missing_by_key(conn, batch_df, match_field, borrowers_match_col):
+    """
+    Update borrowers.* only when target is NULL or '' and new value is non-null/non-empty.
+    match_field: one of ['customer_id','nrc_number'] from DataFrame
+    borrowers_match_col: matching column name in borrowers ['customer_id','identification']
+    """
+    usable_cols = [c for c in nok_src_cols if c in batch_df.columns]
+
+    if not usable_cols:
+        return 0
+
+    # Build SET clause with CASE guards
+    set_fragments = []
+    for src_col in usable_cols:
+        tgt_col = nok_map[src_col]
+        # Set only when existing is NULL/'' and new value is provided
+        set_fragments.append(
+            f"""{tgt_col} = CASE 
+                    WHEN ({tgt_col} IS NULL OR {tgt_col} = '') 
+                         AND :{src_col} IS NOT NULL 
+                         AND :{src_col} <> '' 
+                    THEN :{src_col} 
+                    ELSE {tgt_col} 
+                END"""
+        )
+    set_sql = ",\n    ".join(set_fragments)
+
+    sql = text(f"""
+        UPDATE borrowers
+        SET
+            {set_sql}
+        WHERE {borrowers_match_col} = :match_value
+    """)
+
+    updated = 0
+    # Iterate to get accurate updated count (executemany rowcount can be unreliable across drivers)
+    for _, row in batch_df.iterrows():
+        match_val = row.get(match_field)
+        if pd.isna(match_val) or (isinstance(match_val, str) and not match_val.strip()):
+            continue
+
+        params = {src: (None if pd.isna(row.get(src)) else str(row.get(src))) for src in usable_cols}
+        params['match_value'] = str(match_val)
+
+        res = conn.execute(sql, params)
+        updated += res.rowcount or 0
+
+    return updated
+
+# Split into two batches: prefer customer_id, then NRC fallback
+batch_cid = df_nok[~df_nok['customer_id'].isna() & (df_nok['customer_id'].astype(str).str.strip() != '')].copy() \
+    if 'customer_id' in df_nok.columns else pd.DataFrame(columns=df_nok.columns)
+
+batch_nrc = df_nok[
+    (df_nok.get('customer_id').isna() | (df_nok.get('customer_id').astype(str).str.strip() == '')) &
+    (~df_nok['nrc_number'].isna()) &
+    (df_nok['nrc_number'].astype(str).str.strip() != '')
+].copy() if 'nrc_number' in df_nok.columns else pd.DataFrame(columns=df_nok.columns)
+
+# === 7) Execute updates in a transaction ===
+with engine.begin() as conn:
+    total_updated = 0
+
+    # Update by customer_id → borrowers.customer_id (if that column exists)
+    if 'customer_id' in borrower_cols and not batch_cid.empty:
+        total_updated += update_missing_by_key(conn, batch_cid, 'customer_id', 'customer_id')
+
+    # Fallback: update by NRC → borrowers.identification (if that column exists)
+    if 'identification' in borrower_cols and not batch_nrc.empty:
+        total_updated += update_missing_by_key(conn, batch_nrc, 'nrc_number', 'identification')
+
+    print(f"Done. Rows affected (sum across updates): {total_updated}")

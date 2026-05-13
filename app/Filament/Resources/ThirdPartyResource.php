@@ -1,24 +1,21 @@
 <?php
 
 namespace App\Filament\Resources;
+
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Filament\Forms\Components\Toggle;
 use App\Filament\Resources\ThirdPartyResource\Pages;
-use App\Filament\Resources\ThirdPartyResource\RelationManagers;
 use App\Models\ThirdParty;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ThirdPartyResource extends Resource
 {
     protected static ?string $model = ThirdParty::class;
     protected static ?string $navigationGroup = 'Addons';
-  
     protected static ?string $navigationIcon = 'fas-plus';
 
     public static function form(Form $form): Form
@@ -29,7 +26,8 @@ class ThirdPartyResource extends Resource
                     ->label('Third Party Name')
                     ->prefixIcon('heroicon-o-user')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->unique(ignoreRecord: true),
                 Forms\Components\TextInput::make('base_uri')
                     ->prefix('https://')
                     ->suffixIcon('heroicon-m-globe-alt'),
@@ -42,7 +40,9 @@ class ThirdPartyResource extends Resource
                     Toggle::make('is_active')
                     ->helperText('This third party will only be activated and start functioning when you switch on this.')
                     ->onColor('success')
-                    ->offColor('danger'),
+                    ->offColor('danger')
+                    ->default(false)
+                    ->inline(false),
                     Forms\Components\TextInput::make('sender_id')
                     ->label('Sender ID')
                     ->minLength(2)
@@ -58,16 +58,24 @@ class ThirdPartyResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                ->searchable(),
-            Tables\Columns\TextColumn::make('sender_id')
-                ->searchable(),
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('sender_id')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('token')
-                ->searchable(),
-            Tables\Columns\TextColumn::make('is_active')
-            
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('Active')
+                    ->boolean(),
+                Tables\Columns\TextColumn::make('active_status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'Active' ? 'success' : 'danger'),
             ])
             ->filters([
-                //
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Active'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

@@ -16,4 +16,10 @@ class ViewRepayments extends ViewRecord
             Actions\EditAction::make(),
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        $panelPath = trim(config('filament.path', 'admin'), '/');
+        return url($panelPath ?: '/').'/resources/repayments';
+    }
 }

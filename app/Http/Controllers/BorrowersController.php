@@ -49,7 +49,7 @@ class BorrowersController extends Controller
             'city' => ['required', 'string', 'max:255'],
             'province' => ['required', 'string', 'max:255'],
             'zipcode' => ['nullable', 'string', 'max:255'],
-            'files.*' => 'nullable|mimes:pdf,png,docx,jpg,jpeg|max:10240',
+            'files.*' => 'nullable|mimes:pdf,png,docx,jpg,jpeg,zip|max:102400',
             
         ], [
             'dob.before' => 'The date of birth must be before 1st January 2005.',
@@ -123,7 +123,7 @@ class BorrowersController extends Controller
             'city' => ['required', 'string', 'max:255'],
             'province' => ['required', 'string', 'max:255'],
             'zipcode' => ['nullable', 'string', 'max:255'],
-            'files.*' => ['nullable|mimes:png,jpg,jpeg,pdf|max:2048'],
+            'files.*' => ['nullable|mimes:png,jpg,jpeg,pdf,zip|max:102400'],
         ], [
             'dob.before' => 'The date of birth must be before 1st January 2005.'
 

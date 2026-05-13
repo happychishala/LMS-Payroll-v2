@@ -27,6 +27,18 @@ class Expense extends Model implements HasMedia
     {
         
         return $this->belongsTo(ExpenseCategory::class, 'category_id','id');
-    } 
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('expense_attachment')
+            ->acceptsMimeTypes([
+                'application/pdf',
+                'image/jpeg',
+                'image/png',
+                'application/zip',
+                'application/x-zip-compressed',
+            ]);
+    }
 
 }

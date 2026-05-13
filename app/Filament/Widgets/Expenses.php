@@ -19,7 +19,7 @@ class Expenses extends LineChartWidget
     use HasWidgetShield;
 
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 6;
 
 
 
@@ -44,15 +44,20 @@ class Expenses extends LineChartWidget
             ->sum('expense_amount');
     }
 
-    // Multiply each value in $records by -1
-   // $records = array_map(fn($value) => $value * (-1), $records);
-   $records = array_map(fn($value) => $value, $records);
-
     return [
         'datasets' => [
             [
-                'label' => 'Business Expenses',
+                'label' => 'Business Expenses (ZMW)',
                 'data' => array_map('floatval', $records),
+                'borderColor' => 'rgb(245, 101, 101)',
+                'backgroundColor' => 'rgba(245, 101, 101, 0.1)',
+                'fill' => true,
+                'tension' => 0.4,
+                'pointBackgroundColor' => 'rgb(245, 101, 101)',
+                'pointBorderColor' => '#fff',
+                'pointBorderWidth' => 2,
+                'pointRadius' => 4,
+                'pointHoverRadius' => 6,
             ],
         ],
         'labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],

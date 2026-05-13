@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\BorrowersController;
+use App\Http\Controllers\CustomerHistoryDocumentController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\LoanStatementExportController;
+use App\Http\Controllers\RepaymentImportCorrectionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,4 +31,14 @@ Route::middleware([
     })->name('dashboard');
 
     Route::resource('borrower',BorrowersController::class);
+    Route::get('/customer-history/document', CustomerHistoryDocumentController::class)
+        ->name('customer-history.documents.show');
 });
+
+
+Route::get('/loan-statement/export', [LoanStatementExportController::class, 'export'])
+    ->name('loan.statement.export');
+
+Route::post('/filament/repayments/import-corrections', [RepaymentImportCorrectionController::class, 'import'])
+    ->name('repayments.import.corrections')
+    ->middleware(['auth']); // adjust middleware as needed (Filament uses auth)
