@@ -72,6 +72,7 @@
                     <th class="px-3 py-2">Loan Name</th>
                     <th class="px-3 py-2">Loan Category</th>
                     <th class="px-3 py-2">Disbursement Date</th>
+                    <th class="px-3 py-2">Principal Amount</th>
                     <th class="px-3 py-2">Disbursed Amount</th>
                     <th class="px-3 py-2">Third Party Name</th>
                     <th class="px-3 py-2">Third Party Balance</th>
@@ -99,6 +100,7 @@
                         <td class="px-3 py-2">{{ optional($loan->loan_type)->loan_name }}</td>
                         <td class="px-3 py-2">{{ $loan->loan_category }}</td>
                         <td class="px-3 py-2">{{ optional($loan->loan_release_date)?->format('Y-m-d') }}</td>
+                        <td class="px-3 py-2">{{ number_format($loan->principal_amount ?? 0, 2) }}</td>
                         <td class="px-3 py-2">{{ number_format($loan->disbursement_amount ?? 0, 2) }}</td>
                         <td class="px-3 py-2">{{ $loan->third_party_name ?? 'N/A' }}</td>
                         <td class="px-3 py-2">{{ number_format($loan->total_third_party_balance ?? 0, 2) }}</td>
@@ -117,7 +119,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="20" class="px-3 py-6 text-center text-gray-500">
+                        <td colspan="21" class="px-3 py-6 text-center text-gray-500">
                             No preview loaded. Choose filters and click Preview.
                         </td>
                     </tr>

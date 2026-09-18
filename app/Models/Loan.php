@@ -19,6 +19,7 @@ class Loan extends Model implements HasMedia
 
     protected $casts = [
         'activate_loan_agreement_form' => 'boolean',
+        'exceptional_approval' => 'boolean',
         'payment' => 'decimal:2',
         'monthly_insurance' => 'decimal:2',
         'total_monthly_repayment' => 'decimal:2',

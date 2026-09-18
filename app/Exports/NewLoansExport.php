@@ -61,6 +61,7 @@ class NewLoansExport implements FromCollection, WithHeadings
                     optional($loan->loan_type)->loan_name ?? 'Unknown',     // Loan Name
                     $loan->loan_category ?? 'N/A',                          // Loan Category
                     optional($loan->loan_release_date)?->format('Y-m-d'),   // Disbursement Date
+                    number_format($loan->principal_amount ?? 0, 2),         // Principal Amount
                     number_format($loan->disbursement_amount ?? 0, 2),      // Disbursed Amount
                     $loan->third_party_name ?? 'N/A',                       // Third Party Name
                     number_format($loan->total_third_party_balance ?? 0, 2), // Third Party Balance
@@ -88,6 +89,7 @@ class NewLoansExport implements FromCollection, WithHeadings
             'Loan Name',
             'Loan Category',
             'Disbursement Date',
+            'Principal Amount',
             'Disbursed Amount',
             'Third Party Name',
             'Third Party Balance',

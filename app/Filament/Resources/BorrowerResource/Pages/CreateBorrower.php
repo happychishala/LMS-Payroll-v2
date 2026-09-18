@@ -11,7 +11,10 @@ class CreateBorrower extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-       return BorrowerResource::mutateBorrowerData($data);
+        $data = BorrowerResource::mutateBorrowerData($data);
+        $data['verification_status'] = 'pending';
+
+        return $data;
     }
 
     protected function afterCreate(): void

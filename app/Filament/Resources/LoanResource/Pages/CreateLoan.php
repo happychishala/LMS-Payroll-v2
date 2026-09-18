@@ -19,6 +19,7 @@ use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use App\Notifications\LoanStatusNotification;
 use App\Services\LoanApplicationPdfService;
+use App\Services\LoanApprovalAlertService;
 
 class CreateLoan extends CreateRecord
 {
@@ -187,6 +188,7 @@ class CreateLoan extends CreateRecord
     protected function afterCreate(): void
     {
         app(WithholdingService::class)->syncForLoan($this->record->load('borrower', 'loan_type'));
+        app(LoanApprovalAlertService::class)->alertApprovers($this->record->fresh(['borrower', 'loan_type']));
 
         if (! $this->record->activate_loan_agreement_form) {
             return;

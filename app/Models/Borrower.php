@@ -26,6 +26,10 @@ class Borrower extends Model implements HasMedia
     protected $fillable = [
         'borrower_id',
         'customer_id',
+        'verification_status',
+        'verified_by',
+        'verified_at',
+        'rejection_reason',
         'first_name',
         'last_name',
         'other_names',
@@ -78,6 +82,7 @@ class Borrower extends Model implements HasMedia
         'term_date' => 'date',
         'start_contract' => 'date',
         'end_contract' => 'date',
+        'verified_at' => 'datetime',
     ];
 
     /**
@@ -96,12 +101,19 @@ class Borrower extends Model implements HasMedia
         return $this->hasMany(Loan::class, 'borrower_id', 'id');
     }
 
-    /**
-     * The user who created this borrower record.
-     */
     public function created_by()
     {
         return $this->belongsTo(User::class, 'added_by', 'id');
+    }
+
+    public function verifiedBy()
+    {
+        return $this->belongsTo(User::class, 'verified_by', 'id');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->verification_status === 'pending';
     }
 
     /**

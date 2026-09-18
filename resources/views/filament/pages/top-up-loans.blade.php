@@ -68,9 +68,24 @@
                                 <td class="px-3 py-2">Applied against the additional top-up amount.</td>
                             </tr>
                             <tr class="border-t border-gray-200 dark:border-gray-700">
+                                <td class="px-3 py-2">Accrued loan deductions</td>
+                                <td class="px-3 py-2">{{ number_format($this->topUpPreview['accrued_deductions_total'], 2) }}</td>
+                                <td class="px-3 py-2">Unpaid accrued interest and insurance from the selected loan(s).</td>
+                            </tr>
+                            <tr class="border-t border-gray-200 dark:border-gray-700">
+                                <td class="px-3 py-2">Total settlement amount</td>
+                                <td class="px-3 py-2">{{ number_format($this->topUpPreview['total_settled_amount'], 2) }}</td>
+                                <td class="px-3 py-2">Existing loan balances + accrued loan deductions.</td>
+                            </tr>
+                            <tr class="border-t border-gray-200 dark:border-gray-700">
+                                <td class="px-3 py-2">Total deductions</td>
+                                <td class="px-3 py-2">{{ number_format($this->topUpPreview['total_deductions'], 2) }}</td>
+                                <td class="px-3 py-2">Estimated fees + accrued loan deductions.</td>
+                            </tr>
+                            <tr class="border-t border-gray-200 dark:border-gray-700">
                                 <td class="px-3 py-2">Net cash disbursement</td>
                                 <td class="px-3 py-2">{{ number_format($this->topUpPreview['net_disbursement'], 2) }}</td>
-                                <td class="px-3 py-2">Additional Top-Up Amount - fees.</td>
+                                <td class="px-3 py-2">Additional Top-Up Amount - total deductions.</td>
                             </tr>
                             <tr class="border-t border-gray-200 dark:border-gray-700">
                                 <td class="px-3 py-2">Monthly repayment</td>
@@ -89,7 +104,7 @@
                 @if (($this->topUpPreview['can_create'] ?? true) !== true)
                     <div class="mt-3 text-sm text-danger-600 dark:text-danger-400">
                         @if (($this->topUpPreview['additional_amount_shortfall'] ?? 0) > 0)
-                            Additional Top-Up Amount is too low. Increase it by at least {{ number_format($this->topUpPreview['additional_amount_shortfall'], 2) }} to cover estimated fees.
+                            Additional Top-Up Amount is too low. Increase it by at least {{ number_format($this->topUpPreview['additional_amount_shortfall'], 2) }} to cover estimated fees and accrued loan deductions.
                         @else
                             Enter an Additional Top-Up Amount greater than zero.
                         @endif

@@ -15,7 +15,10 @@ class InterestAccrualExport implements FromCollection, WithHeadings
         protected ?string $asOfDate,
         protected ?string $employer,
         protected ?string $loanName,
-        protected ?string $status
+        protected ?string $status,
+        protected ?string $loanId = null,
+        protected ?string $filterMonth = null,
+        protected ?string $filterYear = null,
     ) {}
 
     public function collection(): Collection
@@ -28,6 +31,10 @@ class InterestAccrualExport implements FromCollection, WithHeadings
             ->when($this->employer, fn ($query, $employer) => $query->where('employer', $employer))
             ->when($this->loanName, fn ($query, $loanName) => $query->whereHas('loan_type', fn ($loanTypeQuery) => $loanTypeQuery->where('loan_name', $loanName)))
             ->when($this->status, fn ($query, $status) => $query->where('loan_status', $status))
+            ->when($this->loanId, fn ($query, $loanId) => $query->where('loan_id', 'like', '%' . $loanId . '%'))
+            ->when($this->filterYear && $this->filterMonth, fn ($query) => $query->whereHas('repaymentSchedules', fn ($q) => $q->whereYear('due_date', $this->filterYear)->whereMonth('due_date', $this->filterMonth)))
+            ->when($this->filterYear && ! $this->filterMonth, fn ($query) => $query->whereHas('repaymentSchedules', fn ($q) => $q->whereYear('due_date', $this->filterYear)))
+            ->when($this->filterMonth && ! $this->filterYear, fn ($query) => $query->whereHas('repaymentSchedules', fn ($q) => $q->whereMonth('due_date', $this->filterMonth)))
             ->whereNotNull('loan_release_date')
             ->orderByDesc('loan_release_date')
             ->get()

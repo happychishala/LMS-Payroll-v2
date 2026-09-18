@@ -59,8 +59,8 @@ class ProfitLossOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-arrow-path')
                 ->color('info'),
 
-            Stat::make('Interest Profit', 'ZMW ' . number_format($interestProfit, 0))
-                ->description('Collected interest is profit')
+            Stat::make('Interest Recovered', 'ZMW ' . number_format($interestProfit, 0))
+                ->description('Recovered loan interest')
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('warning'),
 

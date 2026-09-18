@@ -23,10 +23,22 @@ class InterestAccrualModule extends Page
     public ?string $employer = '';
     public ?string $loanName = '';
     public ?string $status = '';
+    public ?string $loanId = '';
+    public ?string $filterMonth = '';
+    public ?string $filterYear = '';
 
     public function mount(): void
     {
         $this->asOfDate = now()->toDateString();
+    }
+
+    public function getAvailableYearsProperty()
+    {
+        return \App\Models\RepaymentSchedule::query()
+            ->selectRaw('YEAR(due_date) as year')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year');
     }
 
     public function getEmployersProperty()
@@ -62,6 +74,10 @@ class InterestAccrualModule extends Page
             ->when($this->employer, fn ($query, $employer) => $query->where('employer', $employer))
             ->when($this->loanName, fn ($query, $loanName) => $query->whereHas('loan_type', fn ($loanTypeQuery) => $loanTypeQuery->where('loan_name', $loanName)))
             ->when($this->status, fn ($query, $status) => $query->where('loan_status', $status))
+            ->when($this->loanId, fn ($query, $loanId) => $query->where('loan_id', 'like', '%' . $loanId . '%'))
+            ->when($this->filterYear && $this->filterMonth, fn ($query) => $query->whereHas('repaymentSchedules', fn ($q) => $q->whereYear('due_date', $this->filterYear)->whereMonth('due_date', $this->filterMonth)))
+            ->when($this->filterYear && ! $this->filterMonth, fn ($query) => $query->whereHas('repaymentSchedules', fn ($q) => $q->whereYear('due_date', $this->filterYear)))
+            ->when($this->filterMonth && ! $this->filterYear, fn ($query) => $query->whereHas('repaymentSchedules', fn ($q) => $q->whereMonth('due_date', $this->filterMonth)))
             ->whereNotNull('loan_release_date')
             ->orderByDesc('loan_release_date')
             ->get()
@@ -115,7 +131,10 @@ class InterestAccrualModule extends Page
                 $this->asOfDate ?: null,
                 $this->employer ?: null,
                 $this->loanName ?: null,
-                $this->status ?: null
+                $this->status ?: null,
+                $this->loanId ?: null,
+                $this->filterMonth ?: null,
+                $this->filterYear ?: null,
             ),
             'interest_accrual_' . now()->format('Ymd_His') . '.csv'
         );

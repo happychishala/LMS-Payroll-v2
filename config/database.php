@@ -58,8 +58,10 @@ return [
             'prefix_indexes' => true,
             'strict' => false,
             'engine' => null,
+            // DB_SSL_CA is a path relative to the app root (e.g. TiDB requires TLS);
+            // resolved via base_path() so it works the same locally and on Vercel.
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::MYSQL_ATTR_SSL_CA => env('DB_SSL_CA') ? base_path(env('DB_SSL_CA')) : null,
             ]) : [],
         ],
 

@@ -22,10 +22,12 @@ use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use Carbon\Carbon;
 use App\Notifications\LoanStatusNotification;
+use App\Services\LoanApprovalAlertService;
 use App\Models\StatusReason;
 use App\Services\StatusReasonAuthorization;
 use App\Services\StatusReasonService;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -54,6 +56,49 @@ class EditLoan extends EditRecord
                 ->visible(fn (): bool => filled($this->record->loan_application_file_path))
                 ->url(fn (): string => Storage::disk('public')->url($this->record->loan_application_file_path))
                 ->openUrlInNewTab(),
+            Actions\Action::make('exceptionalApproval')
+                ->label('Exceptional Approval')
+                ->icon('heroicon-o-paper-clip')
+                ->color('warning')
+                ->modalHeading('Exceptional Approval')
+                ->modalDescription('Attach the approval email screenshot for this loan.')
+                ->fillForm(fn (): array => [
+                    'exceptional_approval' => (bool) $this->record->exceptional_approval,
+                    'exceptional_approval_email_screenshot_path' => $this->record->exceptional_approval_email_screenshot_path,
+                ])
+                ->form([
+                    Toggle::make('exceptional_approval')
+                        ->label('Exceptional Approval')
+                        ->helperText('Turn this on only when this loan has been exceptionally approved.')
+                        ->live(),
+                    FileUpload::make('exceptional_approval_email_screenshot_path')
+                        ->label('Approval Email Screenshot')
+                        ->disk('public')
+                        ->directory('exceptional-approval-emails')
+                        ->visibility('public')
+                        ->acceptedFileTypes([
+                            'image/jpeg',
+                            'image/png',
+                            'image/webp',
+                        ])
+                        ->maxSize(10240)
+                        ->helperText('Upload the email screenshot confirming exceptional approval.')
+                        ->openable()
+                        ->downloadable()
+                        ->required(fn (Get $get): bool => (bool) $get('exceptional_approval'))
+                        ->visible(fn (Get $get): bool => (bool) $get('exceptional_approval')),
+                ])
+                ->action(function (array $data): void {
+                    $this->record->forceFill([
+                        'exceptional_approval' => (bool) ($data['exceptional_approval'] ?? false),
+                        'exceptional_approval_email_screenshot_path' => $data['exceptional_approval_email_screenshot_path'] ?? null,
+                    ])->save();
+
+                    Notification::make()
+                        ->success()
+                        ->title('Exceptional approval saved')
+                        ->send();
+                }),
             Actions\Action::make('assignStatusReason')
                 ->label($this->record->statusReason ? 'Change Status Reason' : 'Assign Status Reason')
                 ->icon('heroicon-o-tag')
@@ -146,6 +191,7 @@ class EditLoan extends EditRecord
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         $shouldGenerateLoanApplication = (bool) ($data['activate_loan_agreement_form'] ?? false);
+        $previousLoanStatus = $record->loan_status;
 
         $thirdParties = LoanResource::normalizeThirdParties($data['third_parties'] ?? []);
         $data = LoanResource::fillThirdPartyColumns($data, $thirdParties);
@@ -452,6 +498,7 @@ $wallet->withdraw($data['principal_amount'], ['meta' => 'Loan amount disbursed f
 }
 
         $record->update($data);
+        app(LoanApprovalAlertService::class)->alertApprovers($record->fresh(['borrower', 'loan_type']), $previousLoanStatus);
 
         if ($shouldGenerateLoanApplication) {
             $loanApplicationPath = app(LoanApplicationPdfService::class)->generate($record->fresh(['borrower', 'loan_type']));

@@ -50,6 +50,44 @@
             </div>
         </div>
 
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Loan ID</label>
+                <input
+                    type="text"
+                    wire:model.live.debounce.400ms="loanId"
+                    placeholder="e.g. L001"
+                    class="mt-1 w-full rounded-md border-gray-300 bg-white text-sm shadow-sm dark:border-gray-600 dark:bg-gray-800"
+                />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Repayment Month</label>
+                <select
+                    wire:model.live="filterMonth"
+                    class="mt-1 w-full rounded-md border-gray-300 bg-white text-sm shadow-sm dark:border-gray-600 dark:bg-gray-800"
+                >
+                    <option value="">All Months</option>
+                    @foreach ([1=>'January',2=>'February',3=>'March',4=>'April',5=>'May',6=>'June',7=>'July',8=>'August',9=>'September',10=>'October',11=>'November',12=>'December'] as $num => $name)
+                        <option value="{{ $num }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Repayment Year</label>
+                <select
+                    wire:model.live="filterYear"
+                    class="mt-1 w-full rounded-md border-gray-300 bg-white text-sm shadow-sm dark:border-gray-600 dark:bg-gray-800"
+                >
+                    <option value="">All Years</option>
+                    @foreach ($this->availableYears as $year)
+                        <option value="{{ $year }}">{{ $year }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
         <div class="flex items-center gap-3">
             <button
                 type="button"

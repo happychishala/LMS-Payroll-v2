@@ -145,6 +145,29 @@ class LoanResource extends Resource
                     ])
                     ->required(),
 
+                Toggle::make('exceptional_approval')
+                    ->label('Exceptional Approval')
+                    ->helperText('Turn this on only when this loan has approval outside the normal approval flow.')
+                    ->live()
+                    ->default(false),
+
+                FileUpload::make('exceptional_approval_email_screenshot_path')
+                    ->label('Exceptional Approval Email Screenshot')
+                    ->disk('public')
+                    ->directory('exceptional-approval-emails')
+                    ->visibility('public')
+                    ->acceptedFileTypes([
+                        'image/jpeg',
+                        'image/png',
+                        'image/webp',
+                    ])
+                    ->maxSize(10240)
+                    ->helperText('Required when exceptional approval is enabled. Upload the email screenshot confirming approval.')
+                    ->openable()
+                    ->downloadable()
+                    ->required(fn (Get $get): bool => (bool) $get('exceptional_approval'))
+                    ->visible(fn (Get $get): bool => (bool) $get('exceptional_approval')),
+
                 SpatieMediaLibraryFileUpload::make('supporting_documents')
                     ->label('Supporting Documents')
                     ->collection('supporting_documents')
@@ -345,6 +368,11 @@ class LoanResource extends Resource
                                 'Closed' => 'secondary',
                                 default => 'gray',
                             }),
+                        TextEntry::make('exceptional_approval')
+                            ->label('Exceptional Approval')
+                            ->badge()
+                            ->formatStateUsing(fn (bool $state): string => $state ? 'Yes' : 'No')
+                            ->color(fn (bool $state): string => $state ? 'warning' : 'gray'),
                         TextEntry::make('loan_category')
                             ->label('Category'),
                         TextEntry::make('loan_release_date')
@@ -493,6 +521,13 @@ class LoanResource extends Resource
                         TextEntry::make('settlement_documents_list')
                             ->label('Settlement Documents')
                             ->state(fn (Loan $record): string => $record->getMedia('settlement_documents')->pluck('file_name')->implode(', ') ?: 'Not uploaded'),
+                        TextEntry::make('exceptional_approval_email_screenshot_path')
+                            ->label('Exceptional Approval Email Screenshot')
+                            ->formatStateUsing(fn (?string $state): string => $state ? basename($state) : 'Not uploaded')
+                            ->url(fn (Loan $record): ?string => filled($record->exceptional_approval_email_screenshot_path)
+                                ? Storage::disk('public')->url($record->exceptional_approval_email_screenshot_path)
+                                : null)
+                            ->openUrlInNewTab(),
                     ]),
             ]);
     }

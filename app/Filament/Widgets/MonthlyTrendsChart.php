@@ -39,7 +39,7 @@ class MonthlyTrendsChart extends ChartWidget
                 ->whereMonth('receipt_date', $month)
                 ->sum('paid_principal');
 
-            // Interest profit
+            // Interest recovered
             $interestCollections[] = Repayments::query()
                 ->when($startDate, fn(Builder $query) => $query->whereDate('receipt_date', '>=', $startDate))
                 ->when($endDate, fn(Builder $query) => $query->whereDate('receipt_date', '<=', $endDate))
@@ -83,7 +83,7 @@ class MonthlyTrendsChart extends ChartWidget
                     'pointRadius' => 3,
                 ],
                 [
-                    'label' => 'Interest Profit',
+                    'label' => 'Interest Recovered',
                     'data' => array_map('floatval', $interestCollections),
                     'borderColor' => 'rgb(34, 197, 94)',
                     'backgroundColor' => 'rgba(34, 197, 94, 0.1)',

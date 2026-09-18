@@ -10,6 +10,7 @@ use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -372,6 +373,14 @@ class BorrowerResource extends Resource
                 Tables\Columns\TextColumn::make('mobile')->label('Mobile Number')->searchable(),
                 Tables\Columns\TextColumn::make('mine_number')->label('Mine Number')->searchable(),
                 Tables\Columns\TextColumn::make('created_by.name')->label('Created By')->searchable(),
+                Tables\Columns\BadgeColumn::make('verification_status')
+                    ->label('Status')
+                    ->colors([
+                        'warning' => 'pending',
+                        'success' => 'approved',
+                        'danger'  => 'rejected',
+                    ])
+                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
             ])
             ->headerActions([
                 Tables\Actions\Action::make('importBorrowersCsv')
@@ -483,7 +492,13 @@ class BorrowerResource extends Resource
                     ->options([
                         'male' => 'Male',
                         'female' => 'Female',
-
+                    ]),
+                Tables\Filters\SelectFilter::make('verification_status')
+                    ->label('Verification Status')
+                    ->options([
+                        'pending'  => 'Pending',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
                     ]),
             ])
             ->actions([
@@ -492,9 +507,62 @@ class BorrowerResource extends Resource
                     ->icon('heroicon-o-clock')
                     ->url(fn (Borrower $record): string => CustomerHistory::getUrl(['borrower' => $record->id]))
                     ->openUrlInNewTab(),
+
+                Tables\Actions\Action::make('approve')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Approve Customer Details')
+                    ->modalDescription('Confirm that you have verified this customer\'s details and approve the record.')
+                    ->modalSubmitActionLabel('Approve')
+                    ->visible(fn (Borrower $record): bool => $record->verification_status === 'pending' && auth()->user()?->can('approve', $record))
+                    ->action(function (Borrower $record): void {
+                        $record->forceFill([
+                            'verification_status' => 'approved',
+                            'verified_by'         => auth()->id(),
+                            'verified_at'         => now(),
+                            'rejection_reason'    => null,
+                        ])->save();
+
+                        Notification::make()
+                            ->title('Customer approved')
+                            ->body("{$record->first_name} {$record->last_name} has been verified and approved.")
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('reject')
+                    ->label('Reject')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->form([
+                        Textarea::make('rejection_reason')
+                            ->label('Reason for Rejection')
+                            ->required()
+                            ->rows(3)
+                            ->placeholder('Explain why the customer details could not be verified...'),
+                    ])
+                    ->modalHeading('Reject Customer Details')
+                    ->modalSubmitActionLabel('Reject')
+                    ->visible(fn (Borrower $record): bool => $record->verification_status === 'pending' && auth()->user()?->can('approve', $record))
+                    ->action(function (Borrower $record, array $data): void {
+                        $record->forceFill([
+                            'verification_status' => 'rejected',
+                            'verified_by'         => auth()->id(),
+                            'verified_at'         => now(),
+                            'rejection_reason'    => $data['rejection_reason'],
+                        ])->save();
+
+                        Notification::make()
+                            ->title('Customer rejected')
+                            ->body("{$record->first_name} {$record->last_name} has been marked as rejected.")
+                            ->danger()
+                            ->send();
+                    }),
+
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
-
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

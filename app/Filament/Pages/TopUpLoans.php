@@ -171,7 +171,7 @@ class TopUpLoans extends Page implements Forms\Contracts\HasForms
                 throw new \RuntimeException(
                     ($preview['additional_amount_shortfall'] ?? 0) > 0
                         ? sprintf(
-                            'Additional Top-Up Amount must cover the estimated fees. Increase it by at least %s.',
+                            'Additional Top-Up Amount must cover the estimated fees and accrued loan deductions. Increase it by at least %s.',
                             number_format((float) $preview['additional_amount_shortfall'], 2)
                         )
                         : 'Additional Top-Up Amount must be greater than zero.'

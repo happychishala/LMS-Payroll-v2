@@ -89,7 +89,7 @@ class TopUpLoanService
                 'borrower_id' => $templateLoan->borrower_id,
                 'new_loan_id' => $newLoan->loan_id,
                 'topup_amount' => $preview['topup_amount'],
-                'total_settled_amount' => $preview['total_outstanding'],
+                'total_settled_amount' => $preview['total_settled_amount'],
                 'new_principal_amount' => $preview['new_principal'],
                 'source_loan_count' => $loans->count(),
                 'loan_release_date' => $releaseDate->toDateString(),
@@ -99,6 +99,8 @@ class TopUpLoanService
                     'template_loan_id' => $templateLoan->loan_id,
                     'estimated_net_disbursement' => $preview['net_disbursement'],
                     'estimated_fees' => $preview['fees_total'],
+                    'estimated_accrued_deductions' => $preview['accrued_deductions_total'],
+                    'settled_balance_total' => $preview['total_outstanding'],
                 ],
             ]);
 
@@ -109,8 +111,19 @@ class TopUpLoanService
             $settlementRepaymentIds = [];
             foreach ($loans as $loan) {
                 $balance = round((float) ($loan->balance ?? 0), 2);
+                $accruedDeductions = $preview['accrued_deductions_by_loan'][$loan->loan_id] ?? [
+                    'unpaid_interest' => 0.0,
+                    'unpaid_insurance' => 0.0,
+                    'total' => 0.0,
+                ];
                 $statusBefore = (string) ($loan->loan_status ?? '');
-                $settlementRepayment = $this->settleLoan($loan, $releaseDate, $newLoan->loan_id, $batch->batch_reference);
+                $settlementRepayment = $this->settleLoan(
+                    $loan,
+                    $releaseDate,
+                    $newLoan->loan_id,
+                    $batch->batch_reference,
+                    $accruedDeductions,
+                );
                 $settlementRepaymentIds[] = $settlementRepayment->id;
 
                 TopUpLoanItem::create([
@@ -124,6 +137,7 @@ class TopUpLoanService
                     'metadata' => [
                         'new_loan_id' => $newLoan->loan_id,
                         'settlement_reference' => $settlementRepayment->reference_number,
+                        'accrued_deductions' => $accruedDeductions,
                     ],
                 ]);
             }
@@ -218,9 +232,18 @@ class TopUpLoanService
         return $loan->fresh(['borrower', 'loan_type']);
     }
 
-    private function settleLoan(Loan $loan, Carbon $settlementDate, string $newLoanId, string $batchReference): Repayments
+    private function settleLoan(
+        Loan $loan,
+        Carbon $settlementDate,
+        string $newLoanId,
+        string $batchReference,
+        array $accruedDeductions = [],
+    ): Repayments
     {
         $openingBalance = round((float) ($loan->balance ?? 0), 2);
+        $paidInterest = round((float) ($accruedDeductions['unpaid_interest'] ?? 0), 2);
+        $insurancePaid = round((float) ($accruedDeductions['unpaid_insurance'] ?? 0), 2);
+        $settlementAmount = round($openingBalance + $paidInterest + $insurancePaid, 2);
         $repaymentNumber = ((int) Repayments::query()->where('loan_id', $loan->loan_id)->max('repayment_number')) + 1;
 
         $repayment = Repayments::create([
@@ -228,10 +251,10 @@ class TopUpLoanService
             'employee_no' => $loan->employee_no,
             'nrc' => $loan->nrc,
             'receipt_date' => $settlementDate->toDateString(),
-            'receipt_amount' => $openingBalance,
+            'receipt_amount' => $settlementAmount,
             'paid_principal' => $openingBalance,
-            'paid_interest' => 0,
-            'insurance_paid' => 0,
+            'paid_interest' => $paidInterest,
+            'insurance_paid' => $insurancePaid,
             'opening_balance' => $openingBalance,
             'closing_balance' => 0,
             'repayment_number' => max(1, $repaymentNumber),
@@ -246,7 +269,7 @@ class TopUpLoanService
             'employer' => $loan->borrower->employer ?? $loan->employer ?? null,
             'status' => 'top_up',
             'balance' => 0,
-            'payments' => $openingBalance,
+            'payments' => $settlementAmount,
             'principal' => $openingBalance,
             'payments_method' => 'top_up',
             'reference_number' => $batchReference . '-' . $loan->loan_id,
@@ -360,7 +383,7 @@ class TopUpLoanService
     private function fetchEligibleLoans(string|int $borrowerId, array $selectedLoanIds)
     {
         return Loan::query()
-            ->with(['borrower', 'loan_type', 'repaymentSchedules'])
+            ->with(['borrower', 'loan_type', 'repayments', 'repaymentSchedules'])
             ->where('borrower_id', $borrowerId)
             ->whereIn('loan_id', $selectedLoanIds)
             ->whereIn('loan_status', ['approved', 'partially_paid'])
@@ -415,17 +438,21 @@ class TopUpLoanService
         }
 
         [$financials, $loanType] = $this->calculateFinancials($templateLoan, $newPrincipal, $loanTypeId);
+        $accruedDeductionsByLoan = $this->accruedDeductionsByLoan($loans, $releaseDate);
+        $accruedDeductionsTotal = round((float) $accruedDeductionsByLoan->sum('total'), 2);
         $feesTotal = round(
             (float) $financials['admin_fee']
             + (float) $financials['arrangement_fee']
             + (float) $financials['crb_fee'],
             2
         );
-        $netDisbursement = round(max(0, $topUpAmount - $feesTotal), 2);
+        $totalDeductions = round($feesTotal + $accruedDeductionsTotal, 2);
+        $totalSettledAmount = round($totalOutstanding + $accruedDeductionsTotal, 2);
+        $netDisbursement = round(max(0, $topUpAmount - $totalDeductions), 2);
         $withholdingAmount = $this->qualifiesForUpfrontWithholding($templateLoan, $totalOutstanding)
             ? round((float) $financials['total_monthly_repayment'], 2)
             : 0.0;
-        $additionalAmountShortfall = round(max(0, $feesTotal - $topUpAmount), 2);
+        $additionalAmountShortfall = round(max(0, $totalDeductions - $topUpAmount), 2);
 
         $financials['disbursement_amount'] = $netDisbursement;
 
@@ -435,14 +462,58 @@ class TopUpLoanService
             'release_date' => $releaseDate->toDateString(),
             'topup_amount' => $topUpAmount,
             'total_outstanding' => $totalOutstanding,
+            'total_settled_amount' => $totalSettledAmount,
             'new_principal' => $newPrincipal,
             'fees_total' => $feesTotal,
+            'accrued_deductions_total' => $accruedDeductionsTotal,
+            'accrued_deductions_by_loan' => $accruedDeductionsByLoan->all(),
+            'total_deductions' => $totalDeductions,
             'net_disbursement' => $netDisbursement,
             'additional_amount_shortfall' => $additionalAmountShortfall,
-            'can_create' => $topUpAmount > 0 && $topUpAmount >= $feesTotal,
+            'can_create' => $topUpAmount > 0 && $topUpAmount >= $totalDeductions,
             'withholding_amount' => $withholdingAmount,
             'financials' => $financials,
         ];
+    }
+
+    private function accruedDeductionsByLoan(Collection $loans, Carbon $asOfDate): Collection
+    {
+        $interestAccruals = app(LoanInterestAccrualService::class);
+
+        return $loans
+            ->mapWithKeys(function (Loan $loan) use ($interestAccruals, $asOfDate) {
+                $unpaidInterest = $interestAccruals->unpaidAccruedInterest($loan, $asOfDate);
+                $unpaidInsurance = $this->unpaidAccruedInsurance($loan, $asOfDate);
+
+                return [
+                    $loan->loan_id => [
+                        'unpaid_interest' => $unpaidInterest,
+                        'unpaid_insurance' => $unpaidInsurance,
+                        'total' => round($unpaidInterest + $unpaidInsurance, 2),
+                    ],
+                ];
+            });
+    }
+
+    private function unpaidAccruedInsurance(Loan $loan, Carbon $asOfDate): float
+    {
+        $scheduledInsuranceAccrued = round((float) $loan->repaymentSchedules
+            ->filter(fn ($schedule) => Carbon::parse($schedule->due_date)->lte($asOfDate->copy()->endOfMonth()))
+            ->sum('insurance_payment'), 2);
+
+        $dueInstallments = app(LoanInterestAccrualService::class)->dueInstallmentsCount($loan, $asOfDate);
+        $fallbackInsuranceAccrued = round((float) ($loan->monthly_insurance ?? 0) * $dueInstallments, 2);
+        $insurancePaid = round((float) $loan->repayments
+            ->filter(function ($repayment) use ($asOfDate) {
+                $date = $repayment->receipt_date ?? $repayment->payment_date;
+
+                return $date ? Carbon::parse($date)->lte($asOfDate) : true;
+            })
+            ->sum('insurance_paid'), 2);
+
+        $insuranceAccrued = round(max($scheduledInsuranceAccrued, $fallbackInsuranceAccrued, $insurancePaid), 2);
+
+        return round(max($insuranceAccrued - $insurancePaid, 0), 2);
     }
 
     private function qualifiesForUpfrontWithholding(Loan $loan, float $refinancedAmount): bool

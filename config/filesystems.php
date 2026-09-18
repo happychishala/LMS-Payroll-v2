@@ -1,5 +1,24 @@
 <?php
 
+// ponytail: Vercel's filesystem is read-only outside /tmp, so every disk that
+// used to write to public_path()/storage_path() switches to S3-compatible
+// storage (e.g. Cloudflare R2) when FILESYSTEM_DRIVER=s3. Local dev is unaffected.
+$s3Disk = fn (string $prefix) => [
+    'driver' => 's3',
+    'key' => env('AWS_ACCESS_KEY_ID'),
+    'secret' => env('AWS_SECRET_ACCESS_KEY'),
+    'region' => env('AWS_DEFAULT_REGION'),
+    'bucket' => env('AWS_BUCKET'),
+    'endpoint' => env('AWS_ENDPOINT'),
+    'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+    'root' => $prefix,
+    'url' => env('AWS_URL').($prefix ? '/'.$prefix : ''),
+    'visibility' => 'public',
+    'throw' => false,
+];
+
+$useS3 = env('FILESYSTEM_DRIVER', 'local') === 's3';
+
 return [
 
     /*
@@ -36,7 +55,7 @@ return [
             'throw' => false,
         ],
 
-        'borrowers' => [
+        'borrowers' => $useS3 ? $s3Disk('BORROWERS') : [
             'driver' => 'local',
             'root' => public_path('BORROWERS'),
             'throw' => false,
@@ -44,7 +63,7 @@ return [
             'visibility' => 'public',
         ],
 
-        'loan_types' => [
+        'loan_types' => $useS3 ? $s3Disk('LOAN_TYPES') : [
             'driver' => 'local',
             'root' => public_path('LOAN_TYPES'),
             'throw' => false,
@@ -52,7 +71,7 @@ return [
             'visibility' => 'public',
         ],
 
-       'loans' => [
+       'loans' => $useS3 ? $s3Disk('LOANS') : [
             'driver' => 'local',
             'root' => public_path('LOANS'),
             'throw' => false,
@@ -60,7 +79,7 @@ return [
             'visibility' => 'public',
         ],
 
-        'repayments' => [
+        'repayments' => $useS3 ? $s3Disk('REPAYMENTS') : [
             'driver' => 'local',
             'root' => public_path('REPAYMENTS'),
             'throw' => false,
@@ -68,7 +87,7 @@ return [
             'visibility' => 'public',
         ],
 
-        'expenses' => [
+        'expenses' => $useS3 ? $s3Disk('EXPENSES') : [
             'driver' => 'local',
             'root' => public_path('EXPENSES'),
             'throw' => false,
@@ -76,7 +95,7 @@ return [
             'visibility' => 'public',
         ],
 
-        'loan_agreement_forms' => [
+        'loan_agreement_forms' => $useS3 ? $s3Disk('LOAN_AGREEMENT_FORMS') : [
             'driver' => 'local',
             'root' => public_path('LOAN_AGREEMENT_FORMS'),
             'throw' => false,
@@ -84,7 +103,7 @@ return [
             'visibility' => 'public',
         ],
 
-        'public' => [
+        'public' => $useS3 ? $s3Disk('public') : [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => env('APP_URL').'/storage',

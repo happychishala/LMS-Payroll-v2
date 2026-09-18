@@ -1,0 +1,29 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "public/index.php",
+            "use": "vercel-php@0.7.4"
+        },
+        {
+            "src": "public/**/*.{css,js,png,jpg,jpeg,svg,ico,woff,woff2,ttf}",
+            "use": "@vercel/static"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*\\.(css|js|png|jpg|jpeg|svg|ico|woff|woff2|ttf))",
+            "dest": "/public/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/public/index.php"
+        }
+    ],
+    "crons": [
+        {
+            "path": "/api/cron",
+            "schedule": "0 1 * * *"
+        }
+    ]
+}

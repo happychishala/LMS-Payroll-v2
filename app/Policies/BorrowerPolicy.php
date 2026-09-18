@@ -98,11 +98,13 @@ class BorrowerPolicy
         return $user->can('replicate_borrower');
     }
 
-    /**
-     * Determine whether the user can reorder.
-     */
     public function reorder(User $user): bool
     {
         return $user->can('reorder_borrower');
+    }
+
+    public function approve(User $user, Borrower $borrower): bool
+    {
+        return $user->can('approve_borrower');
     }
 }

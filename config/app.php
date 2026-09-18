@@ -43,6 +43,8 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    'cron_secret' => env('CRON_SECRET'),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL
