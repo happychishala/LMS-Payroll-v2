@@ -9,19 +9,19 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('status_reasons', function (Blueprint $table) {
-            $table->string('series')->nullable()->after('code');
-            $table->text('assignment_condition')->nullable()->after('label');
-            $table->text('notes')->nullable()->after('assignment_condition');
-            $table->boolean('suspend_submissions')->default(false)->after('notes');
-            $table->boolean('client_may_replace')->default(false)->after('suspend_submissions');
-            $table->boolean('suspend_interest')->default(false)->after('client_may_replace');
-            $table->boolean('requires_management_approval')->default(false)->after('suspend_interest');
-            $table->boolean('triggers_insurance_claim')->default(false)->after('requires_management_approval');
-            $table->boolean('blocks_new_loan')->default(false)->after('triggers_insurance_claim');
-            $table->boolean('allows_manager_override')->default(false)->after('blocks_new_loan');
-            $table->boolean('requires_mode_of_exit')->default(false)->after('allows_manager_override');
-            $table->boolean('requires_affordability_reason')->default(false)->after('requires_mode_of_exit');
-            $table->json('input_options')->nullable()->after('requires_affordability_reason');
+            $table->string('series')->nullable();
+            $table->text('assignment_condition')->nullable();
+            $table->text('notes')->nullable();
+            $table->boolean('suspend_submissions')->default(false);
+            $table->boolean('client_may_replace')->default(false);
+            $table->boolean('suspend_interest')->default(false);
+            $table->boolean('requires_management_approval')->default(false);
+            $table->boolean('triggers_insurance_claim')->default(false);
+            $table->boolean('blocks_new_loan')->default(false);
+            $table->boolean('allows_manager_override')->default(false);
+            $table->boolean('requires_mode_of_exit')->default(false);
+            $table->boolean('requires_affordability_reason')->default(false);
+            $table->json('input_options')->nullable();
         });
 
         Schema::create('status_reason_events', function (Blueprint $table) {

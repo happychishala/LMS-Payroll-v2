@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::table('loans', function (Blueprint $table) {
             if (! Schema::hasColumn('loans', 'exceptional_approval')) {
-                $table->boolean('exceptional_approval')->default(false)->after('loan_status');
+                $table->boolean('exceptional_approval')->default(false);
             }
 
             if (! Schema::hasColumn('loans', 'exceptional_approval_email_screenshot_path')) {
-                $table->string('exceptional_approval_email_screenshot_path')->nullable()->after('exceptional_approval');
+                $table->string('exceptional_approval_email_screenshot_path')->nullable();
             }
         });
     }

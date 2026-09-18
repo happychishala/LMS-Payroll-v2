@@ -12,8 +12,8 @@ return new class extends Migration
     public function up()
 {
     Schema::table('loans', function (Blueprint $table) {
-        $table->decimal('monthly_insurance', 15, 2)->default(0)->after('insurance_fee');
-        $table->decimal('total_monthly_repayment', 15, 2)->default(0)->after('monthly_insurance');
+        $table->decimal('monthly_insurance', 15, 2)->default(0);
+        $table->decimal('total_monthly_repayment', 15, 2)->default(0);
     });
 }
 

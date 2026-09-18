@@ -9,10 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('borrowers', function (Blueprint $table) {
-            $table->string('verification_status')->default('pending')->after('added_by');
-            $table->foreignId('verified_by')->nullable()->constrained('users')->nullOnDelete()->after('verification_status');
-            $table->timestamp('verified_at')->nullable()->after('verified_by');
-            $table->text('rejection_reason')->nullable()->after('verified_at');
+            $table->string('verification_status')->default('pending');
+            $table->foreignId('verified_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('verified_at')->nullable();
+            $table->text('rejection_reason')->nullable();
         });
     }
 

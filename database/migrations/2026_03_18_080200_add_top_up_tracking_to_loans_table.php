@@ -9,12 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('loans', function (Blueprint $table) {
-            $table->decimal('top_up_amount', 15, 2)->nullable()->after('disbursement_amount');
-            $table->decimal('top_up_source_total', 15, 2)->nullable()->after('top_up_amount');
-            $table->string('top_up_parent_loan_id')->nullable()->after('top_up_source_total');
-            $table->string('top_up_child_loan_id')->nullable()->after('top_up_parent_loan_id');
-            $table->date('top_up_settled_at')->nullable()->after('top_up_child_loan_id');
-            $table->string('top_up_batch_reference')->nullable()->after('top_up_settled_at');
+            $table->decimal('top_up_amount', 15, 2)->nullable();
+            $table->decimal('top_up_source_total', 15, 2)->nullable();
+            $table->string('top_up_parent_loan_id')->nullable();
+            $table->string('top_up_child_loan_id')->nullable();
+            $table->date('top_up_settled_at')->nullable();
+            $table->string('top_up_batch_reference')->nullable();
         });
     }
 
