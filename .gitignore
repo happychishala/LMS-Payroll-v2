@@ -23,3 +23,5 @@ yarn-error.log
 /public/Logos
 
 
+.vercel
+.env*

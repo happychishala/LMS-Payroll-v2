@@ -33,12 +33,6 @@ if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php'))
 
 require __DIR__.'/../vendor/autoload.php';
 
-// ponytail: Vercel's filesystem is read-only outside /tmp; VIEW_COMPILED_PATH
-// is pointed at /tmp there (see .env.example), but the dir must exist first.
-if (getenv('VERCEL') && $compiled = getenv('VIEW_COMPILED_PATH')) {
-    @mkdir($compiled, 0755, true);
-}
-
 /*
 |--------------------------------------------------------------------------
 | Run The Application
