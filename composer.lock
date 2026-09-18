@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "411173e8e4b860bba1611224236c48e7",
+    "content-hash": "d35ee8c9389ee8d23bf4bc09af637e72",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -540,12 +540,12 @@
             "version": "2.5.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/blade-ui-kit/blade-heroicons.git",
+                "url": "https://github.com/driesvints/blade-heroicons.git",
                 "reference": "4ed3ed08e9ac192d0d126b2f12711d6fb6576a48"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/blade-ui-kit/blade-heroicons/zipball/4ed3ed08e9ac192d0d126b2f12711d6fb6576a48",
+                "url": "https://api.github.com/repos/driesvints/blade-heroicons/zipball/4ed3ed08e9ac192d0d126b2f12711d6fb6576a48",
                 "reference": "4ed3ed08e9ac192d0d126b2f12711d6fb6576a48",
                 "shasum": ""
             },
@@ -13055,7 +13055,7 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.1"
+        "php": "^8.2"
     },
     "platform-dev": {},
     "plugin-api-version": "2.6.0"
