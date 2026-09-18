@@ -10,9 +10,13 @@ class TrustProxies extends Middleware
     /**
      * The trusted proxies for this application.
      *
+     * Railway (like Heroku/Render) terminates TLS at its edge and proxies to
+     * the container over plain HTTP, so we trust its X-Forwarded-* headers —
+     * otherwise url()/asset() generate http:// links even on an https:// site.
+     *
      * @var array<int, string>|string|null
      */
-    protected $proxies;
+    protected $proxies = '*';
 
     /**
      * The headers that should be used to detect proxies.
